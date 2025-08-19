@@ -1,0 +1,11 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Mostrar variables recibidas
+      debug:
+        msg:
+          - "Tipo: {{ tipo }}"
+          - "Servidor: {{ servidor }}"
+          - "Base: {{ base }}"
+          - "NombreBD: {{ nombreBD }}"
+          - "Parametros: {{ parametros }}"

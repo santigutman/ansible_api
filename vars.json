@@ -1,0 +1,9 @@
+{
+    "tipo": "deploy",
+    "servidor": "localhost",
+    "base": "prod",
+    "nombreBD": "clientes",
+    "parametros": {
+        "query": "SELECT 1"
+    }
+}
