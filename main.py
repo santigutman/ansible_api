@@ -1,13 +1,11 @@
-# ejecutar_ansible.sh --vars {"tipo":"","servidor":"","base":"","nombreBD":"","parametros":{"query":""}}
-
-from fastapi import FastAPI
+import subprocess
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import json, subprocess
+import os
 
 app = FastAPI()
 
-# Datos que vienen en el body
-class Vars(BaseModel):
+class PlaybookParams(BaseModel):
     tipo: str
     servidor: str
     base: str
@@ -15,29 +13,33 @@ class Vars(BaseModel):
     parametros: dict
 
 @app.post("/run-playbook/")
-def run_playbook(vars: Vars):
-    # Guardamos los parámetros en un archivo JSON temporal
-    with open("vars.json", "w") as f:
-        json.dump(vars.dict(), f, indent=4)
+def run_playbook(params: PlaybookParams):
+    # Construir path dinámico según tipo
+    playbook_file = f"playbooks/{params.tipo}.yml"
 
-    # Ejecutamos ansible con ese archivo como extra-vars
+    # Verificar que el playbook exista
+    if not os.path.exists(playbook_file):
+        raise HTTPException(status_code=400, detail=f"Playbook '{params.tipo}' no encontrado")
+
+    # Armar comando de Ansible
     cmd = [
-        "ansible-playbook", 
-        "playbook.yml", 
-        "--extra-vars", 
-        "@vars.json"
+        "ansible-playbook",
+        playbook_file,
+        "--extra-vars",
+        f"tipo={params.tipo} servidor={params.servidor} base={params.base} nombreBD={params.nombreBD} parametros='{params.parametros}'"
     ]
-    result = subprocess.run(
-        cmd, 
-        capture_output=True, 
-        text=True
-    )
 
-    # Si ansible terminó bien
-    if result.returncode == 0:
-        return {"status": "OK"}
-    else:
-        return {
-            "status": "ERROR",
-            "stderr": result.stderr.splitlines()[-10:]  # últimas 10 líneas del error
-        }
+    # Ejecutar y capturar salida
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    # Imprimir en consola
+    print(result.stdout)
+    print(result.stderr)
+
+    # Devolver salida en JSON
+    return {
+        "status": "OK" if result.returncode == 0 else "ERROR",
+        "stdout": result.stdout,
+        "stderr": result.stderr
+    }
+
